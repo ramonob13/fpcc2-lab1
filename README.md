@@ -4,7 +4,7 @@ Com base no arquivo de dados (no diretório data) responda as questões abaixo, 
 
 ## Questões
 
-* Calcule média e desvio padrão da idade e nível de interesse. As métricas contendos as métricas calculadas para cada curso e nível de interesse devem ser apresentadas de forma ordenada. Além de apresentar no relatório, os resultados devem ser salvos em um arquivo csv.  
+* Calcule média e desvio padrão da idade e nível de interesse. As métricas contendos as métricas calculadas para idade e nível de interesse devem ser apresentadas de forma ordenada. Além de apresentar no relatório, os resultados devem ser salvos em um arquivo csv.  
 
 * Qual o curso com maior valor médio de idade? Discutir os resultados com base nos dados disponíveis em termos de representatividade.  
 
