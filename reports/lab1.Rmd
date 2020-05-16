@@ -1,30 +1,181 @@
 ---
 title: "FPCC2 - Laboratório 1"
-author: "<<aluno>>"
-date: "3/11/2020"
-output: html_document
+author: "Ramon Nóbrega dos Santos"
+date: "16/05/2020"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
-```{r setup, include=FALSE}
+
+```{r setup,include=FALSE,echo=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(readr)
+library(here)
+library(ggplot2)
+library(forcats)
+library(kableExtra)
 ```
 
-## R Markdown
+```{r}
+# Código base -------------------------------------------------------------
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# lendo arquivo de dados
+turma_fpcc2 <- read_csv(here("data/dados-fpcc2.csv"))
 ```
 
-## Including Plots
+<font size="5">**Questão 1 - Calcule média e desvio padrão da idade e nível de interesse. As métricas contendos as métricas calculadas para idade e nível de interesse devem ser apresentadas de forma ordenada. Além de apresentar no relatório, os resultados devem ser salvos em um arquivo csv.**</font>
 
-You can also embed plots, for example:
+<p style="font-family: times, serif; font-size:11pt; font-style:italic">
+    **Why did we use these specific parameters during the calculation of the fingerprints?**
+</p>
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Abaixo, foram calculados dos alunos: as médias das idades, o desvio-padrão das idades ,a média dos interesses pela pós-graduação e o desvio padrão dos interesses, respectivamente.
+```{r}
+media_idades <- mean(turma_fpcc2$Idade)
+desvio_idades<- sd(turma_fpcc2$Idade)
+media_interesses <- mean(turma_fpcc2$`Nível de interesse na pós-gradução`)
+desvio_interesses<- sd(turma_fpcc2$`Nível de interesse na pós-gradução`)
+
+dados_ordenados <-
+  summarise(turma_fpcc2,media_idades,media_interesses,desvio_idades,desvio_interesses)%>%
+  arrange(desc(media_idades,media_interesses,desvio_idades,desvio_interesses))
+
+kable(dados_ordenados, format = 'html') %>%
+  kable_styling(bootstrap_options = c('hover', 'striped'))
+```
+Dados foram ordenados e sumarizados na sequência, depois colocados em forma descendente.
+Por fim, foi criado o arquivo "dados_ordenados.csv" no formato csv referente
+a tabela de dados ordenados.
+```{r}
+write.csv(dados_ordenados,"dados_ordenados.csv")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+<font size="5">**Questão 2 - Qual o curso com o maior valor médio de idade? Discutir os resultados com base nos dados disponíveis em termos de representatividade.**</font>
+
+```{r}
+cursoMaiorIdade <- turma_fpcc2 %>% 
+  group_by(`Curso no PPGCC / UFCG`) %>%
+  summarise(media_idade=mean(Idade),desvio_idade=sd(Idade)) %>%
+  arrange(desc(media_idade))
+
+
+kable(cursoMaiorIdade, format = 'html') %>%
+  kable_styling(bootstrap_options = c('hover', 'striped'))
+```
+
+O curso com maior valor médio de idade foi o de aluno especial. Como hipótese, um aluno especial é alguém que não conseguiu cursar o mestrado ou doutorado de forma sequencial, já possui experiência no mercado de trabalho e tem o interesse em voltar a estudar. Como somente três alunos são especiais, a representatividade dessa hipótese fica comprometida.
+
+<font size="5">**Questão 3 - Crie um gráfico que mostra a idade média para cada curso no formato png.**</font>
+ 
+ ```{r}
+ alunos_curso <- turma_fpcc2 %>%
+   group_by(curso=turma_fpcc2$`Curso no PPGCC / UFCG`) %>%
+      summarise(media_idade = mean(Idade),frequência = n())
+
+alunos_curso_idade <-alunos_curso %>%
+  mutate(curso = fct_reorder(curso,media_idade)) 
+
+
+kable(alunos_curso_idade, format = 'html') %>%
+  kable_styling(bootstrap_options = c('hover', 'striped'))
+```
+
+Primeiramente, os dados são agrupados por curso, depois são calculadas as médias
+de idades em cada um dos cursos (mestrado, doutorado e aluno especial) e a quantidade
+de alunos em cada um dos cursos, gerando uma tibble com esses dados.
+
+Após, os dados foram plotados em um gráfico de barras. No eixo X estão os cursos, no eixo
+Y, as médias das idades de cada um dos cursos. Por fim, o arquivo da plotagem foi salvo no
+formato png com o nome grafico3.png.
+
+```{r}
+
+grafico3<- ggplot(data=alunos_curso_idade)+
+  geom_bar(mapping = aes(x = curso, y = media_idade), stat = "identity", 
+  colour = "azure3", fill = "azure4")
+
+grafico3 #impressão da figura
+ggsave("grafico3.png", width = 3, height = 2) # ggsave precisa que a figura tenha sido impressa em um dispositivo de saída antes
+#grafico+geom_text(size=6) 
+   ```
+   
+ <font size="5"> **Questão 4 - Crie um gráfico que mostra o percentual de alunos para cada estado de origem. Apresente o gráfico e discuta os resultados no relatório. O gráfico também deve ser salvo em uma imagem no formato png.**</font>
+   
+   ```{r}
+   tabela_por_estado <- turma_fpcc2 %>%
+     mutate(`Estado de nascimento (abreviado)` = ifelse(`Estado de nascimento (abreviado)` == "Paraíba", "PB", 
+                                                        ifelse(`Estado de nascimento (abreviado)` == "Ceará", "CE",
+                                                               ifelse(`Estado de nascimento (abreviado)` == "Santa Catarina", "SC",                                                                    `Estado de nascimento (abreviado)`)))) %>%
+         mutate(total_alunos = n()) %>% 
+            group_by(`Estado de nascimento (abreviado)`) %>%
+                summarise(Percentual = (n() / first(total_alunos)) * 100)
+   ```
+   O código acima lê o dataset da turma, depois faz a mudança dos valores, ou seja, onde tiver o nome "Paraíba", será
+   alterado para "PB", onde estiver o nome "Ceará", será alterado para "CE", onde estiver o nome "Santa Catarina", será
+   alterado para SC. Depois, é criada uma variável chamada total de alunos com a quantidade de alunos de cada um dos 
+   estados, por fim, é calculado o percentual de alunos de cada um dos estados.
+   
+   Abaixo, é mostrado o gráfico de barras dos estados e percentuais de alunos de cada um dos estados. Por fim, o arquivo
+   da plotagem grafico4.png é salvo no formato png. 
+   
+   ```{r}
+   ggplot(data = tabela_por_estado) + 
+     geom_bar(mapping = aes(x = `Estado de nascimento (abreviado)`, y = Percentual), stat = "identity",  colour = "azure3", fill = "azure4")
+   
+   ggsave("grafico4.png", width = 3, height = 2) # ggsave precisa que a figura tenha sido impressa em um dispositivo de saída antes
+   ```
+   Pela análise do gráfico, percebe-se que mais de 60% dos alunos são oriundos do estado da Paraíba. Acredito que isso seja
+   devido a qualidade do curso de pós-graduação de computação da UFCG, o que faz com que os alunos dessa área sejam bastante
+   interessados nesse ingresso. Os estados de São Paulo e Bahia ficam em segundo lugar com um pouco mais de 5% dos alunos. Os
+   demais estados compõe o restante da análise.
+   
+<font size="5">**Questão 5 -Compare a média de idade geral com a média dos top-5 e dos bottom-5. Além de apresentar e discutir os resultados no relatório, salvar em uma tabela (dataframe) com as médias em questão.**</font>
+      
+      Primeiramente, são obtidos os 5 alunos que possuem as maiores idades e os
+      5 alunos com as menores idades. 
+
+```{r}
+   maiores_5_idade <- top_n(turma_fpcc2, 5, Idade)
+   menores_5_idade <- top_n(turma_fpcc2, -5, Idade)
+   ```
+   Depois, é calculada a média de idades da turma toda.   De posse da tibble dos alunos de 5 maiores idades,
+   é calculada a média dos alunos que possuem essas idades, da mesma forma para os alunos com as 5 menores
+   idades.
+      
+   ```{r}
+   media_normal_idade <- summarise(turma_fpcc2, valor=mean(Idade))
+   media_maiores_5_idade <- summarise(maiores_5_idade, valor = mean(Idade))
+   media_menores_5_idade <- summarise(menores_5_idade, valor = mean(Idade))
+   ```
+   
+   A seguir, é criada uma tabela que possui as colunas: "Média Total", "Média Maiores 5" e "Média Menores 5". Os valores
+   anteriormente calculados das médias são colocados na tabela q5.
+   
+   ```{r}
+   
+   tabela_q5 <- data.frame(Tipo = c("Média Total", "Média Maiores 5", "Média Menores 5"),     media = c(media_normal_idade$valor, media_maiores_5_idade$valor,           media_menores_5_idade$valor))
+  tabela_q5
+  ```
+Pela análise da tabela acima percebe-se que existe uma diferença significativa entre a média total (25,79) e a média das cinco     maiores médias (35,20) de 9,41. Acredito que isso seja devido aos alunos que possuem as maiores idades, sendo os alunos especiais
+e os alunos de doutorado. Já quando analisada as cinco menores médias (21,87) quando comparada com a média total (25,79), vê-se
+uma diferença bem menor (3,92), ela é explicada, pois a maioria dos alunos da turma de FPCC2 estão cursando o mestrado que possui
+a menor das médias de idades. 
+  
+   <font size="5">**Questão  6 - Você acredita que existe uma relação entre idade e nível de interesse? Discuta.**</font> 
+   
+   ```{r}
+  grafico6<-ggplot(data = turma_fpcc2) + 
+  geom_point(mapping = aes(x = Idade , y = `Nível de interesse na pós-gradução`), 
+     colour = "cadetblue4", fill = "cadetblue4")+
+          theme(panel.border = element_rect(linetype = "dashed", fill = NA))+
+            theme(axis.text.x=element_text(size=12))
+   
+   grafico6
+
+```
+
+Pela análise do gráfico acima, percebe-se que não existe uma correlação entre a idade e o nível de interesse na pós-graduação, já que uma correlação é uma relação linear. Entretanto, percebi uma relação bem interessante: alunos com menos de 26 anos, os interesses são divididos entre 2 e 3. Já para alunos maiores de 26 anos, todos possuem interesse 3. Acredito que os alunos com mais idade são mais experientes, consequentemente, têm uma visão mais definida dos seus interesses profissionais.Portanto, existe uma relação entre as variáveis idade e nível de interesse.
+
+
